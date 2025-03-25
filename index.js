@@ -8,7 +8,13 @@ const PORT = process.env.PORT || 5000;
 const MONGO_URI = process.env.MONGO_URI;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json(), (err, req, res, next) => {
+  if (err) {
+    console.error("JSON Parsing Error:", err);
+    return res.status(400).json({ error: "Invalid JSON" });
+  }
+  next();
+});
 
 // Логируем входящие запросы
 app.use((req, res, next) => {
@@ -22,26 +28,28 @@ if (!MONGO_URI) {
   process.exit(1);
 }
 
+mongoose.set("strictQuery", false);
 mongoose
   .connect(MONGO_URI)
-  .then(() => console.log("MongoDB connected"))
+  .then(() => console.log("✅ MongoDB connected"))
   .catch((err) => {
-    console.error("MongoDB connection error:", err);
+    console.error("❌ MongoDB connection error:", err);
     process.exit(1);
   });
 
 // Определяем маршруты
-app.get("/products", (req, res) => {
-  console.log("GET /products called");
-  res.json([{ id: 1, name: "Product 1" }, { id: 2, name: "Product 2" }]);
-});
+const userRoutes = require("./routes/userRoutes");
+const productRoutes = require("./routes/productRoutes");
 
-// Обработчик для 404 ошибок
+app.use("/api/users", userRoutes);
+app.use("/api/products", productRoutes);
+
+// 404 Обработчик
 app.use((req, res) => {
   res.status(404).json({ error: "Not Found" });
 });
 
 // Запуск сервера
 app.listen(PORT, () => {
-  console.log(`Server running on port ${PORT}`);
+  console.log(`🚀 Server running on http://localhost:${PORT}`);
 });
